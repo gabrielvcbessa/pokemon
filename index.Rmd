@@ -1,0 +1,68 @@
+---
+title: 'Reddit Data Viz Battle: Visualize information on all 802 Pokemon'
+author: "Gabriel Bessa"
+date: "September 2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Objective
+
+In most pokemon games the player has to make a choice: to choose six pokemons to carry and let all the others on the "Pokémon Center". Usually, this choice is made based on how much the player likes each one of them, their level, on their rarity or other feature, but we will take another approach.
+
+We will rank all pokemons based on how effective they are against every other one, so we can chose our six pokemons in a bias-less manner.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df <- read.csv('pokemon.csv')
+
+df[df == ''] <- NA # We want to replace every non-existing value with NA
+
+df$is_legendary <- as.factor(df$is_legendary == '1')
+df$generation <- as.ordered(df$generation)
+```
+
+# Damage calculation
+
+To calculate each pokemon damage output and how much damage it takes from others, we are going to use a simplified version of the damage calculation presented by [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Damage#Damage_calculation). 
+
+We are going to consider all pokemons having the same level, power and are going to use just Type (type effectiveness) as our modifier. This changes are made because we don't have any information on the abilities that a specific pokemon can use, other than their name. Thus, our damage will be calculated as:
+
+![](./simp_damage_calc.png)
+
+# Exploratory Analysis
+
+Besides "type effectiveness", our damage depends only on attack and defense. Legendary pokemons are known for being stronger than other pokemons, let's see if this holds true when analysing those features:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(GGally)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+
+plot_theme <- theme_minimal()
+
+p1 <- ggplot(df, aes(is_legendary, attack)) +
+  geom_boxplot() +
+  plot_theme
+
+p2 <- ggplot(df, aes(is_legendary, defense)) +
+  geom_boxplot() +
+  plot_theme
+
+p3 <- ggplot(df, aes(is_legendary, sp_attack)) +
+  geom_boxplot() +
+  plot_theme
+
+p4 <- ggplot(df, aes(is_legendary, sp_defense)) +
+  geom_boxplot() +
+  plot_theme
+
+grid.arrange(p1, p2, p3, p4, ncol = 4)
+```
+
+As we can see, almost 75% of legendary pokemons are stronger if considering those features than the majority of "non-legendary" pokemons. So, a simple strategy is carrying only legendary pokemons.
+
+
+
+
