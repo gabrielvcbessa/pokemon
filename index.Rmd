@@ -69,7 +69,7 @@ ggplot(df.by_type,
   theme(legend.position = 'bottom')
 ```
 
-It can be hard to tell, but our three most common pokemon types are: Water (14.23%), Normal (13.10%) and Grass (9.73%). So picking a pokemon that is good against water types might be our good option.
+It can be hard to tell but our three most common pokemon types are: Water (14.23%), Normal (13.10%) and Grass (9.73%). So picking a pokemon that is good against water types might be a good option.
 
 Besides type effectiveness, our damage depends only on attack and defense. Legendary pokemons are known for being stronger than other pokemons, let's see if this holds true when analysing those features:
 
@@ -93,7 +93,7 @@ p3 <- ggplot(df, aes(is_legendary, sp_attack)) +
 
 p4 <- ggplot(df, aes(is_legendary, sp_defense)) +
   geom_boxplot() +
-  labs(x = 'Legendary', y = 'Special D') +
+  labs(x = 'Legendary', y = 'Special Defense') +
   plot_theme
 
 grid.arrange(p1, p2, p3, p4, ncol = 4)
@@ -105,7 +105,7 @@ As we can see, almost 75% of legendary pokemons are stronger if considering thos
 
 To calculate each pokemon damage output and how much damage it would take from others, we are going to use a simplified version of the damage calculation presented by [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Damage#Damage_calculation). 
 
-We are going to consider all pokemons having the same level, power and are going to use just Type (type effectiveness) as our modifier. This changes are made because we don't have any information on the abilities that a specific pokemon can use, other than their name. Thus, our damage will be calculated as:
+We are going to consider all pokemons having the same level, power and are going to use just Type (type effectiveness) as our modifier. This changes are made because we don't have any information about the abilities that a specific pokemon can use, other than their name. Thus, our damage will be calculated as:
 
 ![](./simp_damage_calc.png)
 
