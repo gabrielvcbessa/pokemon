@@ -14,9 +14,13 @@ In most pokemon games the player has to make a choice: to choose six pokemons to
 We will rank all pokemons based on how effective they are against every other one, so we can chose our six pokemons in a bias-less manner.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+
 df <- read.csv('pokemon.csv')
 
 df[df == ''] <- NA # We want to replace every non-existing value with NA
+
+df <- df %>% rename(against_fighting = against_fight)
 
 df$is_legendary <- as.factor(df$is_legendary == '1')
 df$generation <- as.ordered(df$generation)
@@ -31,45 +35,25 @@ To start things off, let's see how types are distributed among all pokemons:
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(gridExtra)
 library(ggplot2)
-library(dplyr)
 
 plot_theme <- theme_minimal()
-
-df.by_type.by_gen <- df %>% 
-  group_by(generation) %>% 
-  mutate(gen_poke_count = n()) %>%
-  ungroup() %>% 
-  group_by(generation, type1) %>% 
-  summarise(gen_type_count = n(),
-            gen_poke_count = mean(gen_poke_count),
-            gen_type_per = gen_type_count / mean(gen_poke_count))
-
-ggplot(df.by_type.by_gen, 
-       aes(generation, gen_type_per, fill = type1)) +
-  geom_histogram(stat = 'identity') + 
-  labs(title = 'Type distribution\nby generation',
-       x = 'Generation', 
-       y = 'Percentage') +
-  guides(fill = FALSE) +
-  plot_theme
 
 df.by_type <- df %>% 
   group_by(type1) %>% 
   summarise(type_count = n()) %>% 
-  mutate(type_per = type_count / sum(type_count))
+  mutate(type_per = type_count / sum(type_count)) %>% 
+  arrange(desc(type_count))
 
 ggplot(df.by_type, 
-       aes('', type_per, fill = type1)) +
+       aes(reorder(type1, type_count), type_count, fill = type1)) +
   geom_bar(stat = 'identity') +
-  coord_polar('y', start = 0) +
-    labs(x = '', y = '',
-         title = 'Type distribution',
-         fill = 'Type') +
+  coord_flip() +
+  labs(x = 'Type', y = 'Pokemons in sample') +
   plot_theme +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'none')
 ```
 
-It can be hard to tell but our three most common pokemon types are: Water (14.23%), Normal (13.10%) and Grass (9.73%). So picking a pokemon that is good against water types might be a good option.
+Our three most common pokemon types are: Water (14.23%), Normal (13.10%) and Grass (9.73%). So picking a pokemon that is good against water types might be a good option.
 
 Besides type effectiveness, our damage depends only on attack and defense. Legendary pokemons are known for being stronger than other pokemons, let's see if this holds true when analysing those features:
 
@@ -105,8 +89,62 @@ As we can see, almost 75% of legendary pokemons are stronger if considering thos
 
 To calculate each pokemon damage output and how much damage it would take from others, we are going to use a simplified version of the damage calculation presented by [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Damage#Damage_calculation). 
 
-We are going to consider all pokemons having the same level, power and are going to use just Type (type effectiveness) as our modifier. This changes are made because we don't have any information about the abilities that a specific pokemon can use, other than their name. Thus, our damage will be calculated as:
+We are going to consider all pokemons having the same level, power and are going to use just type effectiveness (Type) as our modifier. This changes are made because we don't have any information about the abilities that a specific pokemon can use, other than their name. Thus, our damage will be calculated as:
 
 ![](./simp_damage_calc.png)
+
+But every pokemon have a default attack/defense and a special one. So, to know how much damage a pokemon will cause on another we are going to calculate the average:
+
+![](./complete_damage_calc.png)
+
+For each pokemon, we are going to calculate the damage it would deal and how much damage it would take from all other pokemons, using the last formula presented above.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df$med_damage_output <- NA
+df$med_damage_taken <- NA
+
+attacks.all <- data.frame(row.names = 1:nrow(df))
+
+for(i in 1:nrow(df)) {
+  attacker <- df[i, ]
+  attacker.attacks <- c()
+  
+  for(j in 1:nrow(df)) {
+    defender <- df[j, ]
+
+    damage.default <- attacker$attack / defender$defense
+    damage.sp <- attacker$sp_attack / defender$sp_defense
+    damage.avg <- (damage.default + damage.sp) / 2
+    damage.avg <- damage.avg * attacker[, paste('against_', attacker$type1, sep = '')]
+    
+    attacker.attacks <- append(attacker.attacks, 
+                               damage.avg, 
+                               after = length(attacker.attacks))
+  }
+  
+  attacks.all <- cbind(attacks.all, 
+                       attacker.attacks)
+  
+  df[i, ]$med_damage_output <- median(attacker.attacks)
+}
+
+rownames(attacks.all) <- df$name
+colnames(attacks.all) <- df$name
+
+for (i in 1:nrow(attacks.all)) {
+  damage.taken <- as.numeric(attacks.all[i ,])
+  df[i, ]$med_damage_taken <- median(damage.taken)
+}
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(df, aes(med_damage_output, med_damage_taken, color = is_legendary)) +
+  geom_point() +
+  labs(x = 'Median Damage Output', 
+       y = 'Median Damage Taken',
+       color = 'Legendary') +
+  plot_theme
+```
 
 
