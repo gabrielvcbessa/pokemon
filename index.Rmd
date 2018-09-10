@@ -68,29 +68,29 @@ Besides type effectiveness, our damage depends only on attack and defense. Legen
 library(GGally)
 
 p1 <- ggplot(df, aes(is_legendary, attack)) +
-  geom_boxplot() +
+  geom_violin() +
   labs(x = 'Legendary', y = 'Attack') +
   plot_theme
 
 p2 <- ggplot(df, aes(is_legendary, defense)) +
-  geom_boxplot() +
+  geom_violin() +
     labs(x = 'Legendary', y = 'Defense') +
   plot_theme
 
 p3 <- ggplot(df, aes(is_legendary, sp_attack)) +
-  geom_boxplot() +
+  geom_violin() +
   labs(x = 'Legendary', y = 'Special Attack') +
   plot_theme
 
 p4 <- ggplot(df, aes(is_legendary, sp_defense)) +
-  geom_boxplot() +
+  geom_violin() +
   labs(x = 'Legendary', y = 'Special Defense') +
   plot_theme
 
 grid.arrange(p1, p2, p3, p4, ncol = 4)
 ```
 
-As we can see, almost 75% of legendary Pokemons are stronger if considering those features than the majority of "non-legendary" Pokemons. So, a simple strategy would be picking a legendary pokemon that is good against water type Pokemons as our first pick.
+As we can see, almost 75% of legendary Pokemons are stronger if considering those features than the majority of "non-legendary" Pokemons. So, a simple strategy would be picking a legendary pokemon that is good against water type Pokemons as our first pick. Of course, we are considering that we could choose between a lendary or a "non-legendary" Pokemon, but we know that lendary pokemons are a much more difficult to find and catch.
 
 # Damage estimation
 
@@ -156,7 +156,7 @@ ggplot(df, aes(est_damage_output, est_damage_taken, color = is_legendary)) +
 
 Most of the Pokemons have an estimated damage output similar to the estimated damage taken, but this doesn't seems to hold true to Pokemons with an damage output greater than 1.5. Those Pokemos have high damage output and also a good defense.
 
-Here are our top fifty pokemons when sorted by estimated damage output, feel free to choose your those six Pokemons and I see you on the battleground. 
+Here are our top one hunderd fifty pokemons when sorted by estimated damage output, feel free to choose your top six and I see you on the battleground. 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(highcharter)
@@ -185,7 +185,7 @@ df.icons <- data_frame(pokedex_number, icon) %>%
   mutate(icon = paste('http:', icon, sep = ''))
 
 df.top <- arrange(df, desc(est_damage_output)) %>% 
-  head(50) %>% 
+  head(150) %>% 
   mutate(x = est_damage_output, 
          y = est_damage_taken,
          est_damage_output = round(est_damage_output, digits = 2),
@@ -247,7 +247,7 @@ tooltip <- c('pokedex_number',
   )) 
 
 highchart() %>% 
-  hc_title(text = 'Top Fifty Pokemons Based on Estimated Damage Output') %>% 
+  hc_title(text = 'Top One Hundred Fifty Pokemons Based on Estimated Damage Output') %>% 
   hc_subtitle(text = 'Author: Gabriel Bessa, gabrielvcbessa.github.io/pokemon') %>% 
   hc_xAxis(title = list(text = 'Median Estimated Damage Output')) %>% 
   hc_yAxis(title = list(text = 'Median Estimated Damage Taken')) %>% 
