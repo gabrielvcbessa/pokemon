@@ -147,18 +147,16 @@ for (i in 1:nrow(attacks.all)) {
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(df, aes(est_damage_output, est_damage_taken, color = is_legendary)) +
   geom_point(alpha = .75) +
-  labs(x = 'Estimated Damage Output', 
-       y = 'Estimated Damage Taken',
+  labs(x = 'Median Estimated Damage Output', 
+       y = 'Median Estimated Damage Taken',
        color = 'Legendary') +
-  coord_cartesian(ylim = c(0, 3)) +
+  coord_cartesian(ylim = c(0, 4)) +
   plot_theme
 ```
 
-Most of the Pokemons have an estimated damage output similar to the estimated damage taken, but this doesn't seems to hold true to Pokemons with an damage output greater than 1.5. Those Pokemos have high damage output and also a good defense, and this is the group that we are going to focus from now on.
+Most of the Pokemons have an estimated damage output similar to the estimated damage taken, but this doesn't seems to hold true to Pokemons with an damage output greater than 1.5. Those Pokemos have high damage output and also a good defense.
 
-# Best Pokemons
-
-We will select your best Pokemons. All the Pokemons will be sorted by their estimated damage output and we are going to select the top fifty.
+Here are our top fifty pokemons when sorted by estimated damage output, feel free to choose your those six Pokemons and I see you on the battleground. 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(highcharter)
@@ -220,7 +218,8 @@ ds.legendary <- df.top.legendary %>%
     x
   })
 
-tooltip <- c('name', 
+tooltip <- c('pokedex_number',
+             'name', 
              'type1', 
              'type2',
              'is_legendary',
@@ -235,20 +234,23 @@ tooltip <- c('name',
   map(function(x) {
     tags$tr(
       tags$th(str_replace_all(str_to_title(x), '_', ' ')),
-      tags$td(paste0('{point.', x, '}'))
+      tags$td(style = 'text-align: right;',
+              paste0('{point.', x, '}'))
     )
   }) %>% 
+  do.call(tagList, .) %>% 
   tagList(
-    tags$img(src = '{point.sprite}',
-             width = '125px', height = '125px')
-    ) %>% 
-  as.character()
+    tags$div(style = 'align-items: center; min-height: 125px; justify-content: center; display: flex;',
+             tags$img(src = '{point.sprite}',
+                      width = '125px', 
+                      height = '125px')
+  )) 
 
 highchart() %>% 
   hc_title(text = 'Top Fifty Pokemons Based on Estimated Damage Output') %>% 
   hc_subtitle(text = 'Author: Gabriel Bessa, gabrielvcbessa.github.io/pokemon') %>% 
-  hc_xAxis(title = list(text = 'Estimated Damage Output')) %>% 
-  hc_yAxis(title = list(text = 'Estimated Damage Taken')) %>% 
+  hc_xAxis(title = list(text = 'Median Estimated Damage Output')) %>% 
+  hc_yAxis(title = list(text = 'Median Estimated Damage Taken')) %>% 
   hc_add_series(data = ds.common,
                 type = 'scatter',
                 label = df.top.common$name,
@@ -267,16 +269,9 @@ highchart() %>%
     borderRadius = 0,
     borderWidth = 2,
     headerFormat = '<table>',
-    pointFormat = tooltip,
+    pointFormat = as.character(tooltip),
     footerFormat = '</table>'
   ) %>% 
   hc_add_theme(hc_theme_elementary())
-```
-
-Based on this plot, this would be the Pokemons that I would choose:
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-head(df.top, n = 5) %>% 
-  select(name)
 ```
 
