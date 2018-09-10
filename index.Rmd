@@ -9,18 +9,30 @@ output:
 
 # Objective
 
-In most pokemon games the player has to make a choice: to choose six Pokemons to carry and let all the others on the "Pokémon Center". Usually, this choice is made based on how much the player likes each one of them, their level, their rarity or other random feature, but we will take another approach.
+In most Pokémon games the player has to make a choice: to choose six Pokémon to carry and let all the others on the "Pokémon Center". Usually, this choice is made based on how much the player likes each one of them, their level, their rarity or other random feature, but we will take another approach.
 
-We will rank all Pokemons based on how effective they are against others, so we can chose our six Pokemons in a bias-less manner.
+We will rank all Pokémon based on how effective they are against others, so we can chose our six Pokémon in a bias-less manner.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(dplyr)
+library(textreadr)
+library(stringr)
+library(htmltools)
+library(rvest)
 
 df <- read.csv('pokemon.csv')
+
+# Parsing data
 
 df[df == ''] <- NA # We want to replace every non-existing value with NA
 
 df <- df %>% rename(against_fighting = against_fight)
+
+df$is_legendary <- as.factor(df$is_legendary == '1')
+df$generation <- as.ordered(df$generation)
+
+# Getting sprites url
+
 df <- transform(
   df, 
   sprite = paste(
@@ -29,15 +41,34 @@ df <- transform(
     sep = '/')) %>% 
   mutate(sprite = paste(sprite, '.png', sep = ''))
 
-df$is_legendary <- as.factor(df$is_legendary == '1')
-df$generation <- as.ordered(df$generation)
+# Getting Pokémon icons
+
+url_bulbapedia_list <- 'https://bulbapedia.bulbagarden.net/wiki/List_of_Pokémon_by_base_stats_(Generation_VII-present)'
+
+pokedex_number <- url_bulbapedia_list %>% 
+  read_html(encoding = 'UTF-8') %>% 
+  html_node('table.sortable') %>% 
+  html_table() %>% 
+  .[[1]] %>% 
+  as.numeric()
+
+icon <-  url_bulbapedia_list %>% 
+  read_html() %>%
+  html_nodes('table.sortable img') %>% 
+  html_attr('src')
+
+df.icons <- data_frame(pokedex_number, icon) %>% 
+  mutate(icon = paste('http:', icon, sep = ''))
+
+df <- inner_join(df, df.icons[!duplicated(df.icons$pokedex_number), ])
+df <- transform(df, icon = sprintf('url(%s)', df$icon))
 ```
 
 # Exploratory Analysis
 
-The damage in pokemon is calculated based on multiple factors, but on our estimation we will just use attack, defense and type effectiveness (as described on the "Damage estimation" section). So let's try to infeer which caracteristics a good pokemon might have through an exploratory data analysis.
+The damage in Pokémon is calculated based on multiple factors, but on our estimation we will just use attack, defense and type effectiveness (as described on the "Damage estimation" section). So let's try to infeer which caracteristics a good Pokémon might have through an exploratory data analysis.
 
-To start things off, let's see how types are distributed among all Pokemons:
+To start things off, let's see how types are distributed among all Pokémon:
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(gridExtra)
@@ -55,14 +86,14 @@ ggplot(df.by_type,
        aes(reorder(type1, type_count), type_count, fill = type1)) +
   geom_bar(stat = 'identity') +
   coord_flip() +
-  labs(x = 'Type', y = 'Pokemons in sample') +
+  labs(x = 'Type', y = 'Pokémon in sample') +
   plot_theme +
   theme(legend.position = 'none')
 ```
 
-Our three most common pokemon types are: Water (14.23%), Normal (13.10%) and Grass (9.73%). So picking a pokemon that is good against water types might be a good option.
+Our three most common Pokémon types are: Water (14.23%), Normal (13.10%) and Grass (9.73%). So picking a Pokémon that is good against water types might be a good option.
 
-Besides type effectiveness, our damage depends only on attack and defense. Legendary Pokemons are known for being stronger than other Pokemons, let's see if this holds true when analysing those features:
+Besides type effectiveness, our damage depends only on attack and defense. Legendary Pokémon are known for being stronger than other Pokémon, let's see if this holds true when analysing those features:
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(GGally)
@@ -90,21 +121,21 @@ p4 <- ggplot(df, aes(is_legendary, sp_defense)) +
 grid.arrange(p1, p2, p3, p4, ncol = 4)
 ```
 
-As we can see, almost 75% of legendary Pokemons are stronger if considering those features than the majority of "non-legendary" Pokemons. So, a simple strategy would be picking a legendary pokemon that is good against water type Pokemons as our first pick. Of course, we are considering that we could choose between a lendary or a "non-legendary" Pokemon, but we know that lendary pokemons are a much more difficult to find and catch.
+As we can see, almost 75% of legendary Pokémon are stronger if considering those features than the majority of "non-legendary" Pokémon. So, a simple strategy would be picking a legendary Pokémon that is good against water type Pokémon as our first pick. Of course, we are considering that we could choose between a lendary or a "non-legendary" Pokemon, but we know that lendary Pokémon are a much more difficult to find and catch.
 
 # Damage estimation
 
-To calculate each pokemon damage output and how much damage it would take from others, we are going to use a simplified version of the damage calculation presented by [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Damage#Damage_calculation). 
+To calculate each Pokémon damage output and how much damage it would take from others, we are going to use a simplified version of the damage calculation presented by [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Damage#Damage_calculation). 
 
-We are going to consider all Pokemons having the same level, power and are going to use just type effectiveness (Type) as our modifier. This changes are made because we don't have any information about the abilities that a specific pokemon can use, other than their name. Thus, our damage will be calculated as:
+We are going to consider all Pokémon having the same level, power and are going to use just type effectiveness (Type) as our modifier. This changes are made because we don't have any information about the abilities that a specific Pokémon can use, other than their name. Thus, our damage will be calculated as:
 
 ![](./simp_damage_calc.png)
 
-Every pokemon have a default attack/defense and a special one. So, to estimate how much damage a pokemon will cause, we are going to calculate the average of those two attacks:
+Every Pokémon have a default attack/defense and a special one. So, to estimate how much damage a Pokémon will cause, we are going to calculate the average of those two attacks:
 
 ![](./complete_damage_calc.png)
 
-For each pokemon, we are going to calculate the damage it would deal and how much damage it would take from all other Pokemons, using the formula presented above.
+For each Pokémon, we are going to calculate the damage it would deal and how much damage it would take from all other Pokémon, using the formula presented above.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 df$est_damage_output <- NA
@@ -154,35 +185,14 @@ ggplot(df, aes(est_damage_output, est_damage_taken, color = is_legendary)) +
   plot_theme
 ```
 
-Most of the Pokemons have an estimated damage output similar to the estimated damage taken, but this doesn't seems to hold true to Pokemons with an damage output greater than 1.5. Those Pokemos have high damage output and also a good defense.
+Most of the Pokémon have an estimated damage output similar to the estimated damage taken, but this doesn't seems to hold true to Pokémon with an damage output greater than 1.5. Those Pokemos have high damage output and also a good defense.
 
-Here are our top one hunderd fifty pokemons when sorted by estimated damage output, feel free to choose your top six and I see you on the battleground. 
+Here are our top one hunderd fifty Pokémon when sorted by estimated damage output, feel free to choose your top six and I see you on the battleground. 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(highcharter)
 library(tidyr)
-library(textreadr)
-library(htmltools)
-library(stringr)
 library(purrr)
-library(rvest)
-
-url_bulbapedia_list <- 'https://bulbapedia.bulbagarden.net/wiki/List_of_Pokémon_by_base_stats_(Generation_VII-present)'
-
-pokedex_number <- url_bulbapedia_list %>% 
-  read_html(encoding = 'UTF-8') %>% 
-  html_node('table.sortable') %>% 
-  html_table() %>% 
-  .[[1]] %>% 
-  as.numeric()
-
-icon <-  url_bulbapedia_list %>% 
-  read_html() %>%
-  html_nodes('table.sortable img') %>% 
-  html_attr('src')
-
-df.icons <- data_frame(pokedex_number, icon) %>% 
-  mutate(icon = paste('http:', icon, sep = ''))
 
 df.top <- arrange(df, desc(est_damage_output)) %>% 
   head(150) %>% 
@@ -196,9 +206,6 @@ df.top <- arrange(df, desc(est_damage_output)) %>%
          special_defense = sp_defense,
          est_dmg_output = est_damage_output,
          est_dmg_taken = est_damage_taken)
-
-df.top <- inner_join(df.top, df.icons[!duplicated(df.icons$pokedex_number), ])
-df.top <- transform(df.top, icon = sprintf('url(%s)', df.top$icon))
 
 df.top.common <- subset(df.top, is_legendary == 'FALSE')
 ds.common <- df.top.common %>% 
@@ -247,7 +254,7 @@ tooltip <- c('pokedex_number',
   )) 
 
 highchart() %>% 
-  hc_title(text = 'Top One Hundred Fifty Pokemons Based on Estimated Damage Output') %>% 
+  hc_title(text = 'Top One Hundred Fifty Pokémon Based on Estimated Damage Output') %>% 
   hc_subtitle(text = 'Author: Gabriel Bessa, gabrielvcbessa.github.io/pokemon') %>% 
   hc_xAxis(title = list(text = 'Median Estimated Damage Output')) %>% 
   hc_yAxis(title = list(text = 'Median Estimated Damage Taken')) %>% 
