@@ -1,0 +1,28 @@
+---
+title: "Dimensionality reduction"
+author: "Gabriel Bessa"
+date: "9/12/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dimensionality reduction
+
+This document will explore how dimensionality reduction techniques can help us understanding our pokemon dataset.
+
+```{r pressure, echo=FALSE}
+library(Rtsne)
+library(dplyr)
+library(tidyr)
+
+library(mice)
+
+df.original <- read.csv('pokemon.csv')
+df <- read.csv('pokemon_complete.csv')
+
+setdiff(names(df), names(df.original)) # We added 6 new features
+```
+
