@@ -1,42 +1,13 @@
----
-title: "Dimensionality reduction"
-author: "Gabriel Bessa"
-date: "9/12/2018"
-output: html_document
----
-
 ```{r setup, include=FALSE}
 library(dplyr)
 
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 options(digits = 5)
 
 df <- read.csv('pokemon_complete.csv') %>% 
   select(-c(height_ft, weight_lbs),
          -starts_with('against_'))
 ```
-
-```{r}
-library(GGally)   
-library(mvtnorm)
-
-df.filtered <- df %>% 
-  select(-c(
-    bmi,
-    generation,
-    pokedex_number,
-    percentage_male
-  ))
-
-ggcorr(df.filtered, 
-       label = TRUE, 
-       label_round = 2)
-```
-
-
-## Dimensionality reduction
-
-This document will explore how dimensionality reduction techniques can help us understanding our pokemon dataset.
 
 ```{r}
 library(Rtsne)
@@ -46,48 +17,44 @@ library(htmltools)
 library(purrr)
 library(stringr)
 
-set.seed(100)
-
-df <- head(df, 30)
-
-df.subset <- df %>% 
-  select(
-    hp,
-    attack,
-    defense,
-    sp_attack,
-    sp_defense,
-    type1,
-    type2,
-    bmi
-  )
-
-tsne <- Rtsne(df.subset,
-              dims = 2,
-              perplexity = 1)
-
-df$x <- tsne$Y[, 1]
-df$y <- tsne$Y[, 2]
-
-ds <- df %>% 
+df.common <- subset(df, is_legendary == 'FALSE')
+ds.common <- df.common %>% 
   list_parse() %>% 
   map(function(x) {
     x$marker$symbol <- paste0('url(', x$icon, ')')
     x$marker$radius <- 2
     x$color <- case_when(x$is_legendary == 'TRUE' ~ '#ffdf00',
                          TRUE ~ '#77a1e5')
+    x$x <- x$base_total
+    x$y <- x$capture_rate
+    x
+  })
+
+df.legendary <- subset(df, is_legendary == 'TRUE')
+ds.legendary <- df.legendary %>% 
+  list_parse() %>% 
+  map(function(x) {
+    x$marker$symbol <- paste0('url(', x$icon, ')')
+    x$marker$radius <- 2
+    x$color <- case_when(x$is_legendary == 'TRUE' ~ '#ffdf00',
+                         TRUE ~ '#77a1e5')
+    x$x <- x$base_total
+    x$y <- x$capture_rate
     x
   })
 
 tooltip <- c('pokedex_number',
              'name', 
              'type', 
-             'height_m',
-             'weight_kgs',
+             'capture_rate',
+             'base_total',
              'attack',
              'defense',
+             'speed',
              'sp_attack',
-             'sp_defense') %>% 
+             'sp_defense',
+             'height_m',
+             'weight_kgs') %>% 
   map(function(x) {
     tags$tr(
       tags$th(str_replace_all(str_to_title(x), '_', ' ')),
@@ -104,12 +71,23 @@ tooltip <- c('pokedex_number',
   )) 
 
 highchart() %>% 
-  hc_add_series(data = ds,
+  hc_title(text = 'Capture Rate vs. Base Total for all 801 Pokémon') %>% 
+  hc_subtitle(text = 'Author: Gabriel Bessa, github.com/gabrielvcbessa/pokemon') %>% 
+  hc_xAxis(title = list(text = 'Base Total')) %>% 
+  hc_yAxis(title = list(text = 'Capture Rate')) %>% 
+  hc_add_series(data = ds.common,
                 type = 'scatter',
-                label = ds$name,
-                sprite = ds$sprite,
+                label = df.common$name,
+                sprite = df.common$sprite,
                 name = 'Common',
                 color = '#77a1e5') %>% 
+  hc_add_series(data = ds.legendary,
+                type = 'scatter',
+                label = df.legendary$name,
+                sprite = df.legendary$sprite,
+                icon = df.legendary$icon,
+                name = 'Legendary',
+                color = '#ffdf00') %>% 
   hc_tooltip(
     useHTML = TRUE,
     borderRadius = 0,
@@ -117,7 +95,6 @@ highchart() %>%
     headerFormat = '<table>',
     pointFormat = as.character(tooltip),
     footerFormat = '</table>'
-  ) %>% 
-  hc_chart(zoomType = 'xy') %>% 
+  ) %>%
   hc_add_theme(hc_theme_elementary())
 ```
