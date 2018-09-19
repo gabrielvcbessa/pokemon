@@ -22,7 +22,7 @@ ds.common <- df.common %>%
   list_parse() %>% 
   map(function(x) {
     x$marker$symbol <- paste0('url(', x$icon, ')')
-    x$marker$radius <- 2
+    x$marker$radius <- 200
     x$color <- case_when(x$is_legendary == 'TRUE' ~ '#ffdf00',
                          TRUE ~ '#77a1e5')
     x$x <- x$base_total
@@ -53,9 +53,7 @@ tooltip <- c('pokedex_number',
              'defense',
              'speed',
              'sp_attack',
-             'sp_defense',
-             'height_m',
-             'weight_kgs') %>% 
+             'sp_defense') %>% 
   map(function(x) {
     tags$tr(
       tags$th(str_replace_all(str_to_title(x), '_', ' ')),
@@ -72,9 +70,9 @@ tooltip <- c('pokedex_number',
   )) 
 
 highchart() %>% 
-  hc_title(text = 'Capture Rate vs. Base Total for all 801 Pokémon') %>% 
+  hc_title(text = 'Capture Rate vs. Base Stats Total for all 801 Pokémon') %>% 
   hc_subtitle(text = 'Author: Gabriel Bessa, github.com/gabrielvcbessa/pokemon') %>% 
-  hc_xAxis(title = list(text = 'Base Total')) %>% 
+  hc_xAxis(title = list(text = 'Base Stats Total')) %>% 
   hc_yAxis(title = list(text = 'Capture Rate')) %>% 
   hc_add_series(data = ds.common,
                 type = 'scatter',
@@ -99,3 +97,4 @@ highchart() %>%
   ) %>%
   hc_add_theme(hc_theme_elementary())
 ```
+
